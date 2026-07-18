@@ -67,10 +67,10 @@ export function BooksDataTable({
         </Button>
       </form>
 
-      <div className="rounded-md border bg-card/50 backdrop-blur-sm overflow-hidden">
+      <div className="glass-card overflow-hidden">
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableRow className="bg-muted/30 hover:bg-muted/30 border-b border-border/50">
               <TableHead>Title</TableHead>
               <TableHead>ISBN</TableHead>
               <TableHead>Availability</TableHead>
@@ -91,23 +91,23 @@ export function BooksDataTable({
               </TableRow>
             ) : (
               books.map((book) => (
-                <TableRow key={book.id}>
+                <TableRow key={book.id} className="hover:bg-accent/30 transition-colors">
                   <TableCell className="font-medium">
                     <div className="flex flex-col">
                       <span>{book.title}</span>
                       {book.callNumber && (
-                        <span className="text-xs text-muted-foreground">Call #: {book.callNumber}</span>
+                         <span className="text-xs text-muted-foreground">Call #: {book.callNumber}</span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-xs">{book.isbn}</TableCell>
                   <TableCell>
                     {book.availableCopies > 0 ? (
-                      <Badge variant="default" className="bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 border-emerald-500/20">
+                      <Badge variant="outline" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
                         {book.availableCopies} of {book.totalCopies} Available
                       </Badge>
                     ) : (
-                      <Badge variant="destructive" className="bg-destructive/15 text-destructive hover:bg-destructive/25 border-destructive/20">
+                      <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20 text-[10px] uppercase font-bold tracking-wider px-2 py-0.5">
                         Out of Stock
                       </Badge>
                     )}

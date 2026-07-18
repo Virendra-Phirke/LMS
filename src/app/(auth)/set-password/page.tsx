@@ -16,6 +16,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import type { ActionResult } from "@/types";
+import { Loader2, ShieldCheck, CheckCircle2, Circle } from "lucide-react";
 
 const PASSWORD_RULES = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
@@ -55,27 +56,27 @@ function SetPasswordForm() {
 
   return (
     <div className="space-y-6">
-      <Card className="border-border/50 bg-card/80 backdrop-blur-sm shadow-xl">
-        <CardHeader className="space-y-1 pb-4 text-center">
-          <div className="mx-auto w-14 h-14 rounded-2xl bg-primary/15 border border-primary/25 flex items-center justify-center mb-2">
-            <span className="text-2xl">🔐</span>
+      <Card className="glass-card">
+        <CardHeader className="space-y-2 pb-6 text-center">
+          <div className="mx-auto w-16 h-16 rounded-2xl bg-primary/15 border border-primary/25 flex items-center justify-center mb-4 shadow-sm">
+            <ShieldCheck className="w-8 h-8 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Set Your Password</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-3xl font-bold tracking-tight">Set Your Password</CardTitle>
+          <CardDescription className="text-base">
             Create a strong password to secure your account
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-4">
+          <form action={formAction} className="space-y-5">
             <input type="hidden" name="userId" value={userId} />
 
             {state?.success === false && (
-              <Alert variant="destructive" className="border-destructive/30 bg-destructive/10">
+              <Alert variant="destructive" className="border-destructive/30 bg-destructive/10 animate-in fade-in slide-in-from-top-2">
                 <AlertDescription>{state.message}</AlertDescription>
               </Alert>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -83,50 +84,46 @@ function SetPasswordForm() {
                 type="password"
                 placeholder="Create a password"
                 required
-                className="h-11 bg-background/50"
+                className="h-12 bg-background/50 focus:bg-background transition-colors"
                 value={password}
                 onChange={(e) => setPasswordValue(e.target.value)}
               />
               {state?.errors?.password && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-destructive animate-in fade-in">
                   {state.errors.password[0]}
                 </p>
               )}
 
               {/* Strength indicator */}
               {password.length > 0 && (
-                <div className="space-y-2">
-                  <div className="flex gap-1">
+                <div className="space-y-3 pt-2 animate-in fade-in">
+                  <div className="flex gap-1.5">
                     {[1, 2, 3, 4].map((i) => (
                       <div
                         key={i}
-                        className={`h-1.5 flex-1 rounded-full transition-colors duration-300 ${
+                        className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${
                           i <= strength ? strengthColor : "bg-muted"
                         }`}
                       />
                     ))}
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
                     {PASSWORD_RULES.map((rule) => (
                       <div
                         key={rule.label}
                         className="flex items-center gap-2 text-xs"
                       >
+                        {rule.test(password) ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-muted-foreground" />
+                        )}
                         <span
-                          className={
+                          className={`transition-colors duration-300 ${
                             rule.test(password)
                               ? "text-emerald-500"
                               : "text-muted-foreground"
-                          }
-                        >
-                          {rule.test(password) ? "✓" : "○"}
-                        </span>
-                        <span
-                          className={
-                            rule.test(password)
-                              ? "text-emerald-500"
-                              : "text-muted-foreground"
-                          }
+                          }`}
                         >
                           {rule.label}
                         </span>
@@ -137,7 +134,7 @@ function SetPasswordForm() {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
                 id="confirmPassword"
@@ -145,10 +142,10 @@ function SetPasswordForm() {
                 type="password"
                 placeholder="Confirm your password"
                 required
-                className="h-11 bg-background/50"
+                className="h-12 bg-background/50 focus:bg-background transition-colors"
               />
               {state?.errors?.confirmPassword && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs text-destructive animate-in fade-in">
                   {state.errors.confirmPassword[0]}
                 </p>
               )}
@@ -156,31 +153,12 @@ function SetPasswordForm() {
 
             <Button
               type="submit"
-              className="w-full h-11 font-semibold cursor-pointer"
+              className="w-full h-12 text-base font-semibold active-press mt-2"
               disabled={isPending || strength < 4}
             >
               {isPending ? (
                 <span className="flex items-center gap-2">
-                  <svg
-                    className="animate-spin h-4 w-4"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                    />
-                  </svg>
+                  <Loader2 className="h-5 w-5 animate-spin" />
                   Setting password...
                 </span>
               ) : (
@@ -196,7 +174,12 @@ function SetPasswordForm() {
 
 export default function SetPasswordPage() {
   return (
-    <Suspense fallback={<div className="flex justify-center p-8">Loading...</div>}>
+    <Suspense fallback={
+      <div className="flex flex-col items-center justify-center p-12 space-y-4 text-muted-foreground">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-sm font-medium">Loading...</p>
+      </div>
+    }>
       <SetPasswordForm />
     </Suspense>
   );

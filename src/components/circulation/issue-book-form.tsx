@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { ArrowUpRight } from "lucide-react";
 
 export function IssueBookForm() {
   const [loading, setLoading] = useState(false);
@@ -49,6 +50,7 @@ export function IssueBookForm() {
           name="userId"
           placeholder="e.g. 550e8400-e29b-41d4-a716-446655440000"
           required
+          className="bg-background/50 h-10"
         />
         <p className="text-xs text-muted-foreground">
           Enter the student&apos;s unique UUID.
@@ -62,13 +64,15 @@ export function IssueBookForm() {
           name="barcode"
           placeholder="e.g. LIB-0123-ABCD-0"
           required
+          className="bg-background/50 h-10"
         />
         <p className="text-xs text-muted-foreground">
           Scan or enter the book copy&apos;s barcode.
         </p>
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button type="submit" disabled={loading} className="w-full gap-2">
+        <ArrowUpRight className="w-4 h-4" />
         {loading ? "Issuing..." : "Issue Book"}
       </Button>
     </form>

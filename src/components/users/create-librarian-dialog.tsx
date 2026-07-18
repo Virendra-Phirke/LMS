@@ -16,6 +16,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { useState } from "react";
+import { UserPlus } from "lucide-react";
 import type { ActionResult } from "@/types";
 
 export function CreateLibrarianDialog() {
@@ -36,11 +37,11 @@ export function CreateLibrarianDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger
-        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground shadow hover:bg-primary/90 h-9 px-4 py-2 cursor-pointer"
+        className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 bg-primary/90 backdrop-blur-sm text-primary-foreground shadow hover:bg-primary h-9 px-4 py-2 cursor-pointer gap-2"
       >
-        <span className="mr-2">+</span> Add Librarian
+        <UserPlus className="w-4 h-4" /> Add Librarian
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md glass-card border-border/50">
         <DialogHeader>
           <DialogTitle>Create Librarian Account</DialogTitle>
           <DialogDescription>

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { ArrowDownLeft } from "lucide-react";
 
 export function ReturnBookForm() {
   const [loading, setLoading] = useState(false);
@@ -48,13 +49,15 @@ export function ReturnBookForm() {
           name="barcode"
           placeholder="e.g. LIB-0123-ABCD-0"
           required
+          className="bg-background/50 h-10"
         />
         <p className="text-xs text-muted-foreground">
           Scan or enter the book copy&apos;s barcode.
         </p>
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button type="submit" disabled={loading} className="w-full gap-2">
+        <ArrowDownLeft className="w-4 h-4" />
         {loading ? "Processing..." : "Process Return"}
       </Button>
     </form>

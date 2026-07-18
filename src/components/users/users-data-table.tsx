@@ -55,16 +55,16 @@ interface UsersDataTableProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  ACTIVE: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-  PENDING: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  SUSPENDED: "bg-red-500/15 text-red-400 border-red-500/30",
-  DEACTIVATED: "bg-zinc-500/15 text-zinc-400 border-zinc-500/30",
+  ACTIVE: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+  PENDING: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  SUSPENDED: "bg-red-500/10 text-red-500 border-red-500/20",
+  DEACTIVATED: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
 };
 
 const ROLE_STYLES: Record<string, string> = {
-  ADMIN: "bg-rose-500/15 text-rose-400 border-rose-500/30",
-  LIBRARIAN: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-  STUDENT: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
+  ADMIN: "bg-rose-500/10 text-rose-500 border-rose-500/20",
+  LIBRARIAN: "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  STUDENT: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 };
 
 export function UsersDataTable({
@@ -117,7 +117,7 @@ export function UsersDataTable({
       </div>
 
       {/* Table */}
-      <div className="rounded-lg border border-border/50 overflow-hidden">
+      <div className="glass-card overflow-hidden">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/30 hover:bg-muted/30">
@@ -142,10 +142,10 @@ export function UsersDataTable({
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user.id} className="group">
+                <TableRow key={user.id} className="group hover:bg-accent/30 transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-semibold text-primary">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-xs font-semibold text-primary shadow-sm">
                         {user.fullName
                           ?.split(" ")
                           .map((n) => n[0])
@@ -164,7 +164,7 @@ export function UsersDataTable({
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] ${ROLE_STYLES[user.role] || ""}`}
+                      className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 ${ROLE_STYLES[user.role] || ""}`}
                     >
                       {user.role}
                     </Badge>
@@ -172,7 +172,7 @@ export function UsersDataTable({
                   <TableCell>
                     <Badge
                       variant="outline"
-                      className={`text-[10px] ${STATUS_STYLES[user.status] || ""}`}
+                      className={`text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 ${STATUS_STYLES[user.status] || ""}`}
                     >
                       {user.status}
                     </Badge>

@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { BookPlus } from "lucide-react";
 import type { ActionResult } from "@/types";
 
 interface Props {
@@ -44,12 +45,12 @@ export function CreateBookDialog({ authors, categories, publishers }: Props) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger 
         render={
-          <Button className="gap-2">
-            <span className="text-lg leading-none">+</span> Add New Book
+          <Button className="gap-2 bg-primary/90 hover:bg-primary shadow-sm backdrop-blur-sm">
+            <BookPlus className="w-4 h-4" /> Add New Book
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-y-auto glass-card border-border/50">
         <DialogHeader>
           <DialogTitle>Add New Book</DialogTitle>
           <DialogDescription>

@@ -5,6 +5,7 @@ import { reserveBook } from "@/actions/circulation";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { BookmarkPlus } from "lucide-react";
 
 interface Props {
   userId: string;
@@ -36,8 +37,9 @@ export function ReserveBookButton({ userId, bookId }: Props) {
     <Button 
       onClick={handleReserve} 
       disabled={loading} 
-      className="w-full"
+      className="w-full gap-2 bg-primary/90 hover:bg-primary shadow-sm backdrop-blur-sm"
     >
+      <BookmarkPlus className="w-4 h-4" />
       {loading ? "Reserving..." : "Place Reservation"}
     </Button>
   );

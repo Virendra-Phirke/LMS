@@ -38,7 +38,7 @@ export default async function StudentCatalogPage(props: {
 
       <div className="flex flex-col md:flex-row gap-6">
         {/* Filters Sidebar */}
-        <div className="w-full md:w-64 space-y-6 shrink-0">
+        <div className="w-full md:w-64 space-y-6 shrink-0 glass-card p-6 h-fit sticky top-6">
           <form className="space-y-4">
             <div className="space-y-2">
               <label htmlFor="search" className="text-sm font-medium">Search Books</label>
@@ -47,30 +47,30 @@ export default async function StudentCatalogPage(props: {
                 name="search"
                 defaultValue={search}
                 placeholder="Title or ISBN..."
-                className="bg-background"
+                className="bg-background/50 h-10"
               />
             </div>
             
-            <Button type="submit" className="w-full">Apply Filters</Button>
+            <Button type="submit" className="w-full h-10">Apply Filters</Button>
             {search && (
               <Link 
                 href="/student/books"
-                className={buttonVariants({ variant: "ghost", className: "w-full" })}
+                className={buttonVariants({ variant: "ghost", className: "w-full h-10" })}
               >
                 Clear Filters
               </Link>
             )}
           </form>
 
-          <div className="pt-4 border-t">
-            <h3 className="font-semibold mb-3">Categories</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
+          <div className="pt-6 border-t border-border/50">
+            <h3 className="font-semibold mb-3 text-sm tracking-wide uppercase text-muted-foreground">Categories</h3>
+            <ul className="space-y-2 text-sm">
               {categories.map((cat) => (
-                <li key={cat.id} className="hover:text-foreground cursor-pointer transition-colors">
+                <li key={cat.id} className="hover:text-primary cursor-pointer transition-colors font-medium">
                   {cat.name}
                 </li>
               ))}
-              {categories.length === 0 && <li>No categories found.</li>}
+              {categories.length === 0 && <li className="text-muted-foreground">No categories found.</li>}
             </ul>
           </div>
         </div>
@@ -78,11 +78,15 @@ export default async function StudentCatalogPage(props: {
         {/* Book Grid */}
         <div className="flex-1">
           {booksData.books.length === 0 ? (
-            <div className="h-64 flex flex-col items-center justify-center border rounded-xl border-dashed bg-card/50 text-muted-foreground">
-              <p>No books found matching your criteria.</p>
+            <div className="h-64 flex flex-col items-center justify-center glass-card border-dashed bg-card/20 text-muted-foreground text-center p-6">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <span className="text-2xl">🔍</span>
+              </div>
+              <p className="text-lg font-medium text-foreground">No books found matching your criteria.</p>
+              <p className="text-sm max-w-sm mt-1">Try adjusting your search terms or clearing the filters.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
               {booksData.books.map((book) => (
                 <BookCard key={book.id} book={book} />
               ))}
