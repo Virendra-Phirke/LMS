@@ -444,9 +444,18 @@ export async function resetPassword(
 // ─── Get Current User ─────────────────────────────────────────────────────────
 
 export async function getCurrentUser() {
-  const session = await getSession();
-  if (!session) return null;
+  const headerStore = await headers();
+  const userId = headerStore.get("x-user-id");
+  if (!userId) {
+    // Fallback if accessed outside middleware context (e.g. server action)
+    const session = await getSession();
+    if (!session) return null;
+    return fetchUserFromDb(session.sub);
+  }
+  return fetchUserFromDb(userId);
+}
 
+async function fetchUserFromDb(userId: string) {
   const [user] = await db
     .select()
     .from(users)

@@ -134,13 +134,28 @@ export async function middleware(request: NextRequest) {
   }
 
   // Inject user info into request headers for downstream use
+  response.headers.set("x-user-id", session.sub);
+  response.headers.set("x-user-role", session.role);
+
+  // We need to clone the request headers to pass them to Next.js server components
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-user-id", session.sub);
   requestHeaders.set("x-user-role", session.role);
 
-  return NextResponse.next({
+  // Reconstruct the response with the modified request headers while keeping cookies
+  const finalResponse = NextResponse.next({
     request: { headers: requestHeaders },
   });
+
+  // Copy any cookies set during this middleware run (like refresh token)
+  response.cookies.getAll().forEach((cookie) => {
+    finalResponse.cookies.set(cookie.name, cookie.value, {
+      ...cookie,
+      // Pass the original options
+    });
+  });
+
+  return finalResponse;
 }
 
 // ─── Middleware Config ────────────────────────────────────────────────────────
