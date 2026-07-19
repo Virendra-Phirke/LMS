@@ -502,3 +502,116 @@ export async function getUserById(userId: string) {
     librarian: librarianData,
   };
 }
+
+// ─── Update User ─────────────────────────────────────────────────────────────
+
+export async function updateUser(
+  userId: string,
+  data: {
+    fullName?: string;
+    phone?: string;
+    department?: string;
+    course?: string;
+  }
+): Promise<ActionResult> {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
+  try {
+    // Verify user exists
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return { success: false, message: "User not found." };
+    }
+
+    // Update profile fields
+    if (data.fullName || data.phone !== undefined) {
+      const profileUpdate: Record<string, string | null> = {};
+      if (data.fullName) profileUpdate.fullName = data.fullName;
+      if (data.phone !== undefined)
+        profileUpdate.phone = data.phone || null;
+
+      await db
+        .update(userProfiles)
+        .set(profileUpdate)
+        .where(eq(userProfiles.userId, userId));
+    }
+
+    // Update student-specific fields
+    if (
+      user.role === "STUDENT" &&
+      (data.department !== undefined || data.course !== undefined)
+    ) {
+      const studentUpdate: Record<string, string | null> = {};
+      if (data.department !== undefined)
+        studentUpdate.department = data.department || null;
+      if (data.course !== undefined)
+        studentUpdate.course = data.course || null;
+
+      await db
+        .update(students)
+        .set(studentUpdate)
+        .where(eq(students.userId, userId));
+    }
+
+    return {
+      success: true,
+      message: "User updated successfully.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Failed to update user.",
+    };
+  }
+}
+
+// ─── Delete User ─────────────────────────────────────────────────────────────
+
+export async function deleteUser(userId: string): Promise<ActionResult> {
+  const authError = await requireAdmin();
+  if (authError) return authError;
+
+  try {
+    // Verify user exists
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    if (!user) {
+      return { success: false, message: "User not found." };
+    }
+
+    // Prevent deleting admins
+    if (user.role === "ADMIN") {
+      return {
+        success: false,
+        message: "Cannot delete admin accounts.",
+      };
+    }
+
+    // Destroy all sessions first
+    await destroyAllSessions(userId);
+
+    // Delete user — cascades to profile, student/librarian record,
+    // borrow records, reservations, sessions, email OTPs
+    await db.delete(users).where(eq(users.id, userId));
+
+    return {
+      success: true,
+      message: "User has been permanently deleted.",
+    };
+  } catch {
+    return {
+      success: false,
+      message: "Failed to delete user.",
+    };
+  }
+}

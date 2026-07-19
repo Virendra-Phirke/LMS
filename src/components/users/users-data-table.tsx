@@ -20,13 +20,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog";
 import { UserDetailsSheet } from "./user-details-sheet";
 import { DataTablePagination } from "@/components/ui/data-table-pagination";
-import { Eye, Inbox } from "lucide-react";
+import {
+  Eye,
+  Inbox,
+  MoreHorizontal,
+  Pencil,
+  Shield,
+  ShieldAlert,
+  ShieldOff,
+  Trash2,
+} from "lucide-react";
+import {
+  suspendUser,
+  activateUser,
+  deactivateUser,
+  deleteUser,
+} from "@/actions/users";
+import { toast } from "sonner";
+import { EditUserDialog } from "./edit-user-dialog";
 
 interface User {
   id: string;
@@ -51,6 +71,7 @@ interface UsersDataTableProps {
   onSearch: (search: string) => void;
   onRoleFilter: (role: string) => void;
   onStatusFilter: (status: string) => void;
+  onRefresh?: () => void;
   hideRoleFilter?: boolean;
 }
 
@@ -67,6 +88,11 @@ const ROLE_STYLES: Record<string, string> = {
   STUDENT: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 };
 
+type ConfirmAction = {
+  type: "suspend" | "deactivate" | "activate" | "delete";
+  user: User;
+} | null;
+
 export function UsersDataTable({
   users,
   pagination,
@@ -74,10 +100,79 @@ export function UsersDataTable({
   onSearch,
   onRoleFilter,
   onStatusFilter,
+  onRefresh,
   hideRoleFilter = false,
 }: UsersDataTableProps) {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [editUser, setEditUser] = useState<User | null>(null);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction>(null);
+  const [actionPending, setActionPending] = useState(false);
+
+  const handleConfirmedAction = async () => {
+    if (!confirmAction) return;
+    setActionPending(true);
+    try {
+      let result;
+      switch (confirmAction.type) {
+        case "activate":
+          result = await activateUser(confirmAction.user.id);
+          break;
+        case "suspend":
+          result = await suspendUser(confirmAction.user.id);
+          break;
+        case "deactivate":
+          result = await deactivateUser(confirmAction.user.id);
+          break;
+        case "delete":
+          result = await deleteUser(confirmAction.user.id);
+          break;
+      }
+      if (result?.success) {
+        toast.success(result.message);
+        setConfirmAction(null);
+        onRefresh?.();
+      } else {
+        toast.error(result?.message || "Action failed");
+      }
+    } catch {
+      toast.error("An error occurred");
+    } finally {
+      setActionPending(false);
+    }
+  };
+
+  const getConfirmConfig = (action: ConfirmAction) => {
+    if (!action) return null;
+    const name = action.user.fullName || action.user.email;
+    const configs = {
+      suspend: {
+        title: "Suspend User",
+        description: `Are you sure you want to suspend ${name}? They will be logged out and unable to access the system.`,
+        confirmLabel: "Suspend User",
+        variant: "warning" as const,
+      },
+      deactivate: {
+        title: "Deactivate User",
+        description: `Are you sure you want to deactivate ${name}? They will be logged out and their account marked as inactive.`,
+        confirmLabel: "Deactivate",
+        variant: "warning" as const,
+      },
+      activate: {
+        title: "Activate User",
+        description: `Are you sure you want to activate ${name}? They will be able to log in and use the system.`,
+        confirmLabel: "Activate",
+        variant: "default" as const,
+      },
+      delete: {
+        title: "Delete User Permanently",
+        description: `This will permanently delete ${name} and all their associated data. This action cannot be undone.`,
+        confirmLabel: "Delete Permanently",
+        variant: "destructive" as const,
+      },
+    };
+    return configs[action.type];
+  };
 
   return (
     <>
@@ -185,25 +280,95 @@ export function UsersDataTable({
                     })}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Tooltip>
-                      <TooltipTrigger 
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
                         render={
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer h-8 w-8 text-muted-foreground hover:text-foreground"
-                            onClick={() => {
-                              setSelectedUser(user);
-                              setSheetOpen(true);
-                            }}
+                            className="h-8 w-8 text-muted-foreground hover:text-foreground cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
                           />
                         }
                       >
-                        <Eye className="h-4 w-4" />
-                        <span className="sr-only">View</span>
-                      </TooltipTrigger>
-                      <TooltipContent>View details</TooltipContent>
-                    </Tooltip>
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="sr-only">Actions</span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-2"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setSheetOpen(true);
+                          }}
+                        >
+                          <Eye className="h-4 w-4" />
+                          View Details
+                        </DropdownMenuItem>
+
+                        {user.role !== "ADMIN" && (
+                          <>
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2"
+                              onClick={() => setEditUser(user)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                              Edit User
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
+
+                            {user.status !== "ACTIVE" && (
+                              <DropdownMenuItem
+                                className="cursor-pointer gap-2 text-emerald-500 focus:text-emerald-500"
+                                onClick={() =>
+                                  setConfirmAction({ type: "activate", user })
+                                }
+                              >
+                                <Shield className="h-4 w-4" />
+                                Activate
+                              </DropdownMenuItem>
+                            )}
+
+                            {user.status !== "SUSPENDED" &&
+                              user.status !== "DEACTIVATED" && (
+                                <DropdownMenuItem
+                                  className="cursor-pointer gap-2 text-amber-500 focus:text-amber-500"
+                                  onClick={() =>
+                                    setConfirmAction({ type: "suspend", user })
+                                  }
+                                >
+                                  <ShieldAlert className="h-4 w-4" />
+                                  Suspend
+                                </DropdownMenuItem>
+                              )}
+
+                            {user.status !== "DEACTIVATED" && (
+                              <DropdownMenuItem
+                                className="cursor-pointer gap-2 text-zinc-500 focus:text-zinc-500"
+                                onClick={() =>
+                                  setConfirmAction({ type: "deactivate", user })
+                                }
+                              >
+                                <ShieldOff className="h-4 w-4" />
+                                Deactivate
+                              </DropdownMenuItem>
+                            )}
+
+                            <DropdownMenuSeparator />
+
+                            <DropdownMenuItem
+                              className="cursor-pointer gap-2 text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                              onClick={() =>
+                                setConfirmAction({ type: "delete", user })
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              Delete User
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))
@@ -225,7 +390,42 @@ export function UsersDataTable({
         user={selectedUser}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
+        onRefresh={onRefresh}
       />
+
+      {/* Edit User Dialog */}
+      {editUser && (
+        <EditUserDialog
+          user={{
+            id: editUser.id,
+            email: editUser.email,
+            role: editUser.role,
+            fullName: editUser.fullName,
+            phone: editUser.phone,
+          }}
+          open={!!editUser}
+          onOpenChange={(val) => {
+            if (!val) setEditUser(null);
+          }}
+          onSuccess={onRefresh}
+        />
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmAction && (
+        <ConfirmationDialog
+          open={!!confirmAction}
+          onOpenChange={(val) => {
+            if (!val) setConfirmAction(null);
+          }}
+          title={getConfirmConfig(confirmAction)!.title}
+          description={getConfirmConfig(confirmAction)!.description}
+          confirmLabel={getConfirmConfig(confirmAction)!.confirmLabel}
+          variant={getConfirmConfig(confirmAction)!.variant}
+          loading={actionPending}
+          onConfirm={handleConfirmedAction}
+        />
+      )}
     </>
   );
 }

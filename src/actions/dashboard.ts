@@ -1,8 +1,8 @@
 "use server";
 
 import { db } from "@/db";
-import { users, books, borrowRecords, reservations } from "@/db/schema";
-import { eq, sql, and, gte } from "drizzle-orm";
+import { users, books, borrowRecords, reservations, userProfiles, bookCopies } from "@/db/schema";
+import { eq, sql, and, gte, desc } from "drizzle-orm";
 
 import { withCache } from "@/lib/cache";
 
@@ -10,16 +10,23 @@ import { withCache } from "@/lib/cache";
 
 export async function getAdminDashboardStats() {
   return withCache(async () => {
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+
     const [
       [userCount],
       [bookCount],
       [activeBorrows],
-      [pendingReservations]
+      [pendingReservations],
+      [overdueCount],
+      [newUsersWeek],
     ] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(users),
       db.select({ count: sql<number>`count(*)` }).from(books),
       db.select({ count: sql<number>`count(*)` }).from(borrowRecords).where(eq(borrowRecords.status, "ACTIVE")),
       db.select({ count: sql<number>`count(*)` }).from(reservations).where(eq(reservations.status, "PENDING")),
+      db.select({ count: sql<number>`count(*)` }).from(borrowRecords).where(eq(borrowRecords.status, "OVERDUE")),
+      db.select({ count: sql<number>`count(*)` }).from(users).where(gte(users.createdAt, oneWeekAgo)),
     ]);
 
     return {
@@ -27,8 +34,40 @@ export async function getAdminDashboardStats() {
       totalBooks: Number(bookCount?.count || 0),
       activeBorrows: Number(activeBorrows?.count || 0),
       pendingReservations: Number(pendingReservations?.count || 0),
+      overdueBooks: Number(overdueCount?.count || 0),
+      newUsersThisWeek: Number(newUsersWeek?.count || 0),
     };
   }, ["admin-dash-stats"], { revalidate: 60, tags: ["dashboard", "admin"] });
+}
+
+// ─── Admin Recent Activity ────────────────────────────────────────────────────
+
+export async function getAdminRecentActivity() {
+  return withCache(async () => {
+    const recentBorrows = await db
+      .select({
+        id: borrowRecords.id,
+        status: borrowRecords.status,
+        issuedAt: borrowRecords.issuedAt,
+        returnedAt: borrowRecords.returnedAt,
+        userName: userProfiles.fullName,
+        copyBarcode: bookCopies.barcode,
+      })
+      .from(borrowRecords)
+      .leftJoin(userProfiles, eq(borrowRecords.userId, userProfiles.userId))
+      .leftJoin(bookCopies, eq(borrowRecords.copyId, bookCopies.id))
+      .orderBy(desc(borrowRecords.createdAt))
+      .limit(5);
+
+    return recentBorrows.map((r) => ({
+      id: r.id,
+      type: r.returnedAt ? ("return" as const) : ("borrow" as const),
+      userName: r.userName || "Unknown",
+      barcode: r.copyBarcode || "N/A",
+      timestamp: r.returnedAt || r.issuedAt,
+      status: r.status,
+    }));
+  }, ["admin-recent-activity"], { revalidate: 30, tags: ["dashboard", "admin"] });
 }
 
 // ─── Librarian Dashboard Stats ──────────────────────────────────────────────────────

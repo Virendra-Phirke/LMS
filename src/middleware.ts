@@ -12,10 +12,13 @@ const PUBLIC_ROUTES = [
   "/set-password",
 ];
 
+// Shared routes accessible to all authenticated users
+const SHARED_ROUTES = ["/settings", "/profile"];
+
 const ROLE_ROUTES: Record<string, string[]> = {
-  ADMIN: ["/admin", "/settings"],
-  LIBRARIAN: ["/librarian", "/books", "/borrow", "/returns"],
-  STUDENT: ["/student", "/profile", "/reservations"],
+  ADMIN: ["/admin", ...SHARED_ROUTES],
+  LIBRARIAN: ["/librarian", "/books", "/borrow", "/returns", ...SHARED_ROUTES],
+  STUDENT: ["/student", "/reservations", ...SHARED_ROUTES],
 };
 
 const ROLE_DASHBOARDS: Record<string, string> = {
@@ -53,27 +56,39 @@ export async function middleware(request: NextRequest) {
   // If access token expired, try refresh
   let response = NextResponse.next();
   if (!session && refreshToken) {
-    const refreshPayload = await verifyRefreshToken(refreshToken);
-    if (refreshPayload) {
-      // Issue new access token
-      const newAccessToken = await signAccessToken(refreshPayload);
+    try {
+      const refreshPayload = await verifyRefreshToken(refreshToken);
+      if (refreshPayload && refreshPayload.role && ROLE_DASHBOARDS[refreshPayload.role]) {
+        // Issue new access token
+        const newAccessToken = await signAccessToken(refreshPayload);
+        response = NextResponse.next();
+        response.cookies.set("lms_access_token", newAccessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "lax",
+          path: "/",
+          maxAge: ACCESS_TOKEN_MAX_AGE,
+        });
+        session = refreshPayload;
+      } else {
+        // Invalid payload — clear stale cookies to prevent redirect loops
+        response = NextResponse.next();
+        response.cookies.delete("lms_access_token");
+        response.cookies.delete("lms_refresh_token");
+      }
+    } catch {
+      // Token verification failed — clear stale cookies
       response = NextResponse.next();
-      response.cookies.set("lms_access_token", newAccessToken, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        maxAge: ACCESS_TOKEN_MAX_AGE,
-      });
-      session = refreshPayload;
+      response.cookies.delete("lms_access_token");
+      response.cookies.delete("lms_refresh_token");
     }
   }
 
   // Root redirect
   if (pathname === "/") {
-    if (session) {
+    if (session && ROLE_DASHBOARDS[session.role]) {
       return NextResponse.redirect(
-        new URL(ROLE_DASHBOARDS[session.role] || "/login", request.url)
+        new URL(ROLE_DASHBOARDS[session.role], request.url)
       );
     }
     return NextResponse.redirect(new URL("/login", request.url));
@@ -81,11 +96,12 @@ export async function middleware(request: NextRequest) {
 
   // Public routes — redirect authenticated users to dashboard
   if (isPublicRoute) {
-    if (session) {
+    if (session && ROLE_DASHBOARDS[session.role]) {
       return NextResponse.redirect(
-        new URL(ROLE_DASHBOARDS[session.role] || "/login", request.url)
+        new URL(ROLE_DASHBOARDS[session.role], request.url)
       );
     }
+    // Not authenticated or unknown role — allow access to public route
     return response;
   }
 
@@ -105,10 +121,16 @@ export async function middleware(request: NextRequest) {
   );
 
   if (!hasAccess) {
-    // Redirect to role-appropriate dashboard
-    return NextResponse.redirect(
-      new URL(ROLE_DASHBOARDS[userRole] || "/login", request.url)
-    );
+    // Redirect to role-appropriate dashboard (never fall back to /login to avoid loops)
+    const dashboard = ROLE_DASHBOARDS[userRole];
+    if (dashboard) {
+      return NextResponse.redirect(new URL(dashboard, request.url));
+    }
+    // Unknown role — clear session and send to login
+    const clearResponse = NextResponse.redirect(new URL("/login", request.url));
+    clearResponse.cookies.delete("lms_access_token");
+    clearResponse.cookies.delete("lms_refresh_token");
+    return clearResponse;
   }
 
   // Inject user info into request headers for downstream use

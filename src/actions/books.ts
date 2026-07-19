@@ -200,3 +200,89 @@ export async function createBook(
     return { success: false, message: "Failed to create book" };
   }
 }
+
+// ─── Update Book ──────────────────────────────────────────────────────────────
+
+export async function updateBook(
+  bookId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  try {
+    const title = formData.get("title") as string;
+    const isbn = formData.get("isbn") as string;
+    const callNumber = (formData.get("callNumber") as string) || null;
+    const yearStr = formData.get("year") as string;
+    const year = yearStr ? parseInt(yearStr, 10) : null;
+    const description = (formData.get("description") as string) || null;
+    const coverImage = (formData.get("coverImage") as string) || null;
+
+    if (!title || !isbn) {
+      return { success: false, message: "Title and ISBN are required" };
+    }
+
+    // Check if book exists
+    const [existing] = await db
+      .select()
+      .from(books)
+      .where(eq(books.id, bookId))
+      .limit(1);
+
+    if (!existing) {
+      return { success: false, message: "Book not found" };
+    }
+
+    // Check for duplicate ISBN (if changed)
+    if (isbn !== existing.isbn) {
+      const [duplicate] = await db
+        .select()
+        .from(books)
+        .where(eq(books.isbn, isbn))
+        .limit(1);
+
+      if (duplicate) {
+        return { success: false, message: "Another book with this ISBN already exists" };
+      }
+    }
+
+    await db
+      .update(books)
+      .set({
+        title,
+        isbn,
+        callNumber,
+        year,
+        description,
+        coverImage,
+      })
+      .where(eq(books.id, bookId));
+
+    return { success: true, message: "Book updated successfully" };
+  } catch (error) {
+    console.error("Failed to update book:", error);
+    return { success: false, message: "Failed to update book" };
+  }
+}
+
+// ─── Delete Book ──────────────────────────────────────────────────────────────
+
+export async function deleteBook(bookId: string): Promise<ActionResult> {
+  try {
+    const [existing] = await db
+      .select()
+      .from(books)
+      .where(eq(books.id, bookId))
+      .limit(1);
+
+    if (!existing) {
+      return { success: false, message: "Book not found" };
+    }
+
+    // Delete book — cascades to copies, borrows, reservations
+    await db.delete(books).where(eq(books.id, bookId));
+
+    return { success: true, message: "Book has been permanently deleted." };
+  } catch (error) {
+    console.error("Failed to delete book:", error);
+    return { success: false, message: "Failed to delete book" };
+  }
+}

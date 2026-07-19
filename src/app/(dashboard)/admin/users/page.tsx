@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { TableSkeleton } from "@/components/ui/table-skeleton";
 import { CreateLibrarianDialog } from "@/components/users/create-librarian-dialog";
 import { CreateStudentDialog } from "@/components/users/create-student-dialog";
 import { UsersDataTable } from "@/components/users/users-data-table";
 import { getUsers } from "@/actions/users";
 import type { UserRole } from "@/types";
+import { Users, UserCheck, Clock, ShieldOff } from "lucide-react";
 
 export default function UsersManagementPage() {
   const [isPending, startTransition] = useTransition();
@@ -65,6 +67,38 @@ export default function UsersManagementPage() {
     setSearchTimeout(timeout);
   };
 
+  // Summary stats from loaded data
+  const summaryStats = [
+    {
+      label: "Total",
+      value: data.pagination.total,
+      icon: Users,
+      color: "text-primary",
+      bg: "bg-primary/10 border-primary/20",
+    },
+    {
+      label: "Active",
+      value: data.users.filter((u) => u.status === "ACTIVE").length,
+      icon: UserCheck,
+      color: "text-emerald-500",
+      bg: "bg-emerald-500/10 border-emerald-500/20",
+    },
+    {
+      label: "Pending",
+      value: data.users.filter((u) => u.status === "PENDING").length,
+      icon: Clock,
+      color: "text-amber-500",
+      bg: "bg-amber-500/10 border-amber-500/20",
+    },
+    {
+      label: "Suspended",
+      value: data.users.filter((u) => u.status === "SUSPENDED").length,
+      icon: ShieldOff,
+      color: "text-red-500",
+      bg: "bg-red-500/10 border-red-500/20",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -81,10 +115,40 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
+      {/* Summary Badges */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {summaryStats.map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className="flex items-center gap-3 px-4 py-3 rounded-xl bg-card/60 backdrop-blur-sm border border-border/50 shadow-sm"
+            >
+              <div
+                className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${stat.bg}`}
+              >
+                <Icon className={`w-4 h-4 ${stat.color}`} />
+              </div>
+              <div>
+                <p className="text-xl font-bold leading-none">{stat.value}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {stat.label}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* Data table */}
       <Card className="border-border/50">
         <CardHeader className="pb-3">
-          <CardTitle className="text-lg">All Users</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">All Users</CardTitle>
+            <Badge variant="outline" className="text-xs font-medium">
+              {data.pagination.total} total
+            </Badge>
+          </div>
         </CardHeader>
         <CardContent>
           {isPending ? (
@@ -93,25 +157,26 @@ export default function UsersManagementPage() {
             <UsersDataTable
               users={data.users}
               pagination={data.pagination}
-            onPageChange={(page) =>
-              setFilters((prev) => ({ ...prev, page }))
-            }
-            onSearch={handleSearch}
-            onRoleFilter={(role) =>
-              setFilters((prev) => ({
-                ...prev,
-                role: role === "all" ? "" : (role as UserRole),
-                page: 1,
-              }))
-            }
-            onStatusFilter={(status) =>
-              setFilters((prev) => ({
-                ...prev,
-                status: status === "all" ? "" : status,
-                page: 1,
-              }))
-            }
-          />
+              onPageChange={(page) =>
+                setFilters((prev) => ({ ...prev, page }))
+              }
+              onSearch={handleSearch}
+              onRoleFilter={(role) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  role: role === "all" ? "" : (role as UserRole),
+                  page: 1,
+                }))
+              }
+              onStatusFilter={(status) =>
+                setFilters((prev) => ({
+                  ...prev,
+                  status: status === "all" ? "" : status,
+                  page: 1,
+                }))
+              }
+              onRefresh={fetchUsers}
+            />
           )}
         </CardContent>
       </Card>
