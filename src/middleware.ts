@@ -46,6 +46,14 @@ export async function middleware(request: NextRequest) {
     (route) => pathname === route || pathname.startsWith(route + "/")
   );
 
+  // Check for explicit session clear request
+  if (request.nextUrl.searchParams.get("clearSession") === "true") {
+    const clearResponse = NextResponse.redirect(new URL("/login", request.url));
+    clearResponse.cookies.delete("lms_access_token");
+    clearResponse.cookies.delete("lms_refresh_token");
+    return clearResponse;
+  }
+
   // Get tokens from cookies
   const accessToken = request.cookies.get("lms_access_token")?.value;
   const refreshToken = request.cookies.get("lms_refresh_token")?.value;

@@ -12,6 +12,7 @@ import {
   destroyAllSessions,
   getSession,
 } from "@/lib/auth/session";
+import { cache } from "react";
 import { createEmailOTP, verifyEmailOTP, canResendOTP } from "@/lib/auth/otp";
 import {
   loginSchema,
@@ -443,7 +444,7 @@ export async function resetPassword(
 
 // ─── Get Current User ─────────────────────────────────────────────────────────
 
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const headerStore = await headers();
   const userId = headerStore.get("x-user-id");
   if (!userId) {
@@ -453,13 +454,13 @@ export async function getCurrentUser() {
     return fetchUserFromDb(session.sub);
   }
   return fetchUserFromDb(userId);
-}
+});
 
 async function fetchUserFromDb(userId: string) {
   const [user] = await db
     .select()
     .from(users)
-    .where(eq(users.id, session.sub))
+    .where(eq(users.id, userId))
     .limit(1);
 
   if (!user) return null;

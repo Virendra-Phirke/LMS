@@ -10,7 +10,7 @@ export default async function Layout({
   const user = await getCurrentUser();
 
   if (!user) {
-    redirect("/login");
+    redirect("/login?clearSession=true");
   }
 
   return (
