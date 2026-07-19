@@ -418,33 +418,33 @@ export async function getUsers(options?: {
   const whereClause =
     conditions.length > 0 ? and(...conditions) : undefined;
 
-  // Get total count
-  const [countResult] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(users)
-    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
-    .where(whereClause);
+  // Get total count and paginated results in a single batched network request
+  const [[countResult], result] = await db.batch([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(whereClause),
+    db
+      .select({
+        id: users.id,
+        email: users.email,
+        role: users.role,
+        status: users.status,
+        emailVerified: users.emailVerified,
+        createdAt: users.createdAt,
+        fullName: userProfiles.fullName,
+        phone: userProfiles.phone,
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(whereClause)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
 
   const total = Number(countResult?.count || 0);
-
-  // Get paginated results
-  const result = await db
-    .select({
-      id: users.id,
-      email: users.email,
-      role: users.role,
-      status: users.status,
-      emailVerified: users.emailVerified,
-      createdAt: users.createdAt,
-      fullName: userProfiles.fullName,
-      phone: userProfiles.phone,
-    })
-    .from(users)
-    .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
-    .where(whereClause)
-    .orderBy(desc(users.createdAt))
-    .limit(limit)
-    .offset(offset);
 
   return {
     users: result,

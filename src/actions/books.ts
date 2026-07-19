@@ -24,21 +24,22 @@ export async function getBooks(options: {
       )
     : undefined;
 
-  const [totalRes] = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(books)
-    .where(whereClause);
-    
+  const [[totalRes], results] = await db.batch([
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(books)
+      .where(whereClause),
+    db
+      .select()
+      .from(books)
+      .where(whereClause)
+      .orderBy(desc(books.createdAt))
+      .limit(limit)
+      .offset(offset),
+  ]);
+
   const total = Number(totalRes.count);
   const totalPages = Math.ceil(total / limit);
-
-  const results = await db
-    .select()
-    .from(books)
-    .where(whereClause)
-    .orderBy(desc(books.createdAt))
-    .limit(limit)
-    .offset(offset);
 
   return {
     books: results,

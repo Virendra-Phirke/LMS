@@ -20,7 +20,7 @@ export async function getAdminDashboardStats() {
       [pendingReservations],
       [overdueCount],
       [newUsersWeek],
-    ] = await Promise.all([
+    ] = await db.batch([
       db.select({ count: sql<number>`count(*)` }).from(users),
       db.select({ count: sql<number>`count(*)` }).from(books),
       db.select({ count: sql<number>`count(*)` }).from(borrowRecords).where(eq(borrowRecords.status, "ACTIVE")),
@@ -82,7 +82,7 @@ export async function getLibrarianDashboardStats() {
       [overdue],
       [issuedToday],
       [totalFines]
-    ] = await Promise.all([
+    ] = await db.batch([
       db.select({ count: sql<number>`count(*)` }).from(reservations).where(eq(reservations.status, "PENDING")),
       db.select({ count: sql<number>`count(*)` }).from(borrowRecords).where(eq(borrowRecords.status, "OVERDUE")),
       db.select({ count: sql<number>`count(*)` }).from(borrowRecords).where(gte(borrowRecords.issuedAt, today)),
@@ -106,7 +106,7 @@ export async function getStudentDashboardStats(userId: string) {
       [activeBorrows],
       [pendingReservations],
       [unpaidFines]
-    ] = await Promise.all([
+    ] = await db.batch([
       db.select({ count: sql<number>`count(*)` })
         .from(borrowRecords)
         .where(and(eq(borrowRecords.userId, userId), eq(borrowRecords.status, "ACTIVE"))),
