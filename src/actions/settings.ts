@@ -4,10 +4,10 @@ import { db } from "@/db";
 import { settings } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { getSession } from "@/actions/auth";
+import { getCurrentUser } from "@/actions/auth";
 
 export async function getSystemSettings() {
-  const session = await getSession();
+  const session = await getCurrentUser();
   if (!session) throw new Error("Unauthorized");
   
   const results = await db.select().from(settings);
@@ -29,8 +29,8 @@ export async function updateSystemSettings(data: {
   idCardTheme: string;
   idCardLayout: string;
 }) {
-  const session = await getSession();
-  if (!session || (session.role !== "admin" && session.role !== "librarian")) {
+  const session = await getCurrentUser();
+  if (!session || (session.role !== "ADMIN" && session.role !== "LIBRARIAN")) {
     throw new Error("Unauthorized");
   }
 

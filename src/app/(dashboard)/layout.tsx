@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users, userProfiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
+import { setupStudentProfile } from "@/actions/users";
 
 export default async function Layout({
   children,
@@ -16,15 +17,22 @@ export default async function Layout({
     redirect("/login");
   }
 
-  // Look up DB user by Clerk ID
-  const [user] = await db
+  let [user] = await db
     .select()
     .from(users)
     .where(eq(users.clerkId, clerkUser.id))
     .limit(1);
 
   if (!user) {
-    redirect("/onboarding");
+    await setupStudentProfile();
+    // Re-fetch after creation
+    [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.clerkId, clerkUser.id))
+      .limit(1);
+    
+    if (!user) redirect("/login");
   }
 
   const [profile] = await db

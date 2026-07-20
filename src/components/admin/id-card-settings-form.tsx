@@ -66,7 +66,7 @@ export function IdCardSettingsForm({ initialConfig }: IdCardSettingsFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="theme">Color Theme</Label>
-          <Select value={idCardTheme} onValueChange={setIdCardTheme}>
+          <Select value={idCardTheme} onValueChange={(v) => setIdCardTheme(v || "")}>
             <SelectTrigger id="theme">
               <SelectValue placeholder="Select a theme" />
             </SelectTrigger>
@@ -82,7 +82,7 @@ export function IdCardSettingsForm({ initialConfig }: IdCardSettingsFormProps) {
 
         <div className="space-y-2">
           <Label htmlFor="layout">Layout Preset</Label>
-          <Select value={idCardLayout} onValueChange={setIdCardLayout}>
+          <Select value={idCardLayout} onValueChange={(v) => setIdCardLayout(v || "")}>
             <SelectTrigger id="layout">
               <SelectValue placeholder="Select a layout" />
             </SelectTrigger>

@@ -61,12 +61,17 @@ export default async function StudentDashboard() {
             View your books, reservations, and account details
           </p>
         </div>
-        <Button asChild className="shrink-0 gap-2">
-          <a href={`/api/users/${session.sub}/id-card`} target="_blank" rel="noopener noreferrer">
+        <div className="shrink-0 gap-2 flex">
+          <a
+            href={`/api/users/${session.sub}/id-card`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 gap-2"
+          >
             <IdCard className="w-4 h-4" />
             Download ID Card
           </a>
-        </Button>
+        </div>
       </header>
 
       <section aria-label="Key Statistics">

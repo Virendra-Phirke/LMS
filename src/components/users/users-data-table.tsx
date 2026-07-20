@@ -306,12 +306,10 @@ export function UsersDataTable({
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="cursor-pointer gap-2"
-                          asChild
+                          onClick={() => window.open(`/api/users/${user.id}/id-card`, "_blank")}
                         >
-                          <a href={`/api/users/${user.id}/id-card`} target="_blank" rel="noopener noreferrer">
-                            <IdCard className="h-4 w-4 text-muted-foreground" />
-                            Download ID Card
-                          </a>
+                          <IdCard className="h-4 w-4 text-muted-foreground" />
+                          Download ID Card
                         </DropdownMenuItem>
 
                         {user.role !== "ADMIN" && (

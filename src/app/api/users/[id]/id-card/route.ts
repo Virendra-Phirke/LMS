@@ -5,14 +5,14 @@ import { users, students, userProfiles } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { generateLibraryIDCardPDF } from "@/lib/generateLibraryIDCard";
 import { getSystemSettings } from "@/actions/settings";
-import { getSession } from "@/actions/auth";
+import { getCurrentUser } from "@/actions/auth";
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
-    const session = await getSession();
+    const session = await getCurrentUser();
     if (!session) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
@@ -20,7 +20,7 @@ export async function GET(
     const requestedUserId = params.id;
 
     // Permissions: Student can only access their own. Admin/Librarian can access any.
-    if (session.role === "student" && session.userId !== requestedUserId) {
+    if (session.role === "STUDENT" && session.id !== requestedUserId) {
       return new NextResponse("Forbidden", { status: 403 });
     }
 
@@ -46,25 +46,13 @@ export async function GET(
     const settings = await getSystemSettings();
 
     // Prepare dates
-    const issueDateStr = student?.enrollmentDate
-      ? new Date(student.enrollmentDate).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : new Date(user.createdAt).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        });
+    const issueDateStr = new Date(user.createdAt).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
 
-    const expiryDateStr = student?.graduationDate
-      ? new Date(student.graduationDate).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
-      : undefined;
+    const expiryDateStr = undefined; // Assuming no clear expiry date, or it can be removed
 
     // Handle profile image if stored as URL or binary. For this example, 
     // assuming no direct byte storage, we will fallback to standard generation.
@@ -72,12 +60,12 @@ export async function GET(
     let photoBytes: ArrayBuffer | undefined;
     let photoType: "jpg" | "png" | undefined;
 
-    if (profile?.avatarUrl) {
+    if (profile?.avatar) {
       try {
-        const res = await fetch(profile.avatarUrl);
+        const res = await fetch(profile.avatar);
         if (res.ok) {
           photoBytes = await res.arrayBuffer();
-          photoType = profile.avatarUrl.toLowerCase().endsWith(".png") ? "png" : "jpg";
+          photoType = profile.avatar.toLowerCase().endsWith(".png") ? "png" : "jpg";
         }
       } catch (e) {
         console.error("Failed to fetch avatar for ID card:", e);
@@ -87,7 +75,7 @@ export async function GET(
     const pdfBytes = await generateLibraryIDCardPDF(
       {
         libraryName: settings.libraryName,
-        memberName: `${user.firstName} ${user.lastName}`,
+        memberName: profile?.fullName || user.email,
         memberId: user.id,
         department: student?.department || user.role,
         issueDate: issueDateStr.replace(/ /g, "-"),
@@ -103,7 +91,7 @@ export async function GET(
       }
     );
 
-    return new NextResponse(pdfBytes, {
+    return new NextResponse(pdfBytes as any, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="Library-ID-${user.id}.pdf"`,

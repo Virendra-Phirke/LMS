@@ -30,37 +30,13 @@ function generateEmployeeId(): string {
   return `${prefix}-${random}`;
 }
 
-// ─── Complete Student Onboarding ──────────────────────────────────────────────
+// ─── Setup Student Profile ──────────────────────────────────────────────────────
 
-export async function completeOnboarding(
-  _prevState: ActionResult | null,
-  formData: FormData
-): Promise<ActionResult> {
+export async function setupStudentProfile(): Promise<ActionResult> {
   const clerkUser = await currentUser();
   if (!clerkUser) {
     return { success: false, message: "Not authenticated" };
   }
-
-  const rawData = {
-    studentId: formData.get("studentId") as string,
-    fullName: formData.get("fullName") as string,
-    email: clerkUser.emailAddresses[0]?.emailAddress || "",
-    department: (formData.get("department") as string) || "",
-    course: (formData.get("course") as string) || "",
-    phone: (formData.get("phone") as string) || "",
-  };
-
-  const validated = createStudentSchema.safeParse(rawData);
-  if (!validated.success) {
-    return {
-      success: false,
-      message: "Invalid input",
-      errors: validated.error.flatten().fieldErrors,
-    };
-  }
-
-  const { studentId, fullName, email, department, course, phone } =
-    validated.data;
 
   // Check if Clerk user already has a DB record
   const [existingUser] = await db
@@ -70,63 +46,43 @@ export async function completeOnboarding(
     .limit(1);
 
   if (existingUser) {
-    return {
-      success: false,
-      message: "Account already set up. Please refresh the page.",
-    };
+    return { success: true, message: "Account already set up." };
   }
 
-  // Check if student ID already exists
-  const [existingStudentId] = await db
-    .select({ id: students.id })
-    .from(students)
-    .where(eq(students.studentId, studentId))
-    .limit(1);
-
-  if (existingStudentId) {
-    return {
-      success: false,
-      message: "A student with this ID already exists",
-    };
-  }
+  // Generate a random student ID since we skipped onboarding
+  const studentId = `STU-${Math.floor(10000 + Math.random() * 90000)}`;
 
   // Create user record
   const [newUser] = await db
     .insert(users)
     .values({
       clerkId: clerkUser.id,
-      email: email.toLowerCase(),
+      email: clerkUser.emailAddresses[0]?.emailAddress || "",
       role: "STUDENT",
       status: "ACTIVE",
     })
     .returning();
 
+  const fullName = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || "Student";
+
   // Create profile
   await db.insert(userProfiles).values({
     userId: newUser.id,
     fullName,
-    phone: phone || null,
   });
 
   // Create student record
   await db.insert(students).values({
     userId: newUser.id,
     studentId,
-    department: department || null,
-    course: course || null,
   });
-
   // Set role in Clerk metadata (so middleware can read it from session)
   const client = await clerkClient();
   await client.users.updateUserMetadata(clerkUser.id, {
     publicMetadata: { role: "STUDENT" },
   });
 
-  return {
-    success: true,
-    message: "Account setup complete! Redirecting to your dashboard...",
-    data: { redirect: "/student" },
-  };
+  return { success: true, message: "Profile created" };
 }
 
 // ─── Create Librarian ─────────────────────────────────────────────────────────
