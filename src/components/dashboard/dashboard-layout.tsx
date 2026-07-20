@@ -40,7 +40,8 @@ import {
   ClipboardList,
   BookDown,
   BookUp,
-  UserCircle
+  UserCircle,
+  IdCard
 } from "lucide-react";
 
 // ─── Navigation Config ───────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { label: "Analytics", href: "/admin/analytics", icon: BarChart },
     { label: "Users", href: "/admin/users", icon: Users },
     { label: "Books", href: "/admin/books", icon: BookMarked },
+    { label: "ID Card Settings", href: "/admin/id-card-settings", icon: IdCard },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   LIBRARIAN: [
@@ -65,6 +67,7 @@ const NAV_ITEMS: Record<string, NavItem[]> = {
     { label: "Book Stock", href: "/librarian/books", icon: BookMarked },
     { label: "Borrow", href: "/librarian/borrow", icon: BookUp },
     { label: "Returns", href: "/librarian/returns", icon: BookDown },
+    { label: "ID Card Settings", href: "/librarian/id-card-settings", icon: IdCard },
     { label: "Settings", href: "/settings", icon: Settings },
   ],
   STUDENT: [

@@ -2,7 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStudentDashboardStats } from "@/actions/dashboard";
 import { getSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
-import { Library, ClipboardList, Coins, Clock, Sparkles } from "lucide-react";
+import { Library, ClipboardList, Coins, Clock, Sparkles, IdCard } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default async function StudentDashboard() {
   const session = await getSession();
@@ -51,13 +52,21 @@ export default async function StudentDashboard() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500" role="main" aria-label="Student Dashboard Main Content">
-      <header className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Student Dashboard
-        </h1>
-        <p className="text-muted-foreground">
-          View your books, reservations, and account details
-        </p>
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">
+            Student Dashboard
+          </h1>
+          <p className="text-muted-foreground">
+            View your books, reservations, and account details
+          </p>
+        </div>
+        <Button asChild className="shrink-0 gap-2">
+          <a href={`/api/users/${session.sub}/id-card`} target="_blank" rel="noopener noreferrer">
+            <IdCard className="w-4 h-4" />
+            Download ID Card
+          </a>
+        </Button>
       </header>
 
       <section aria-label="Key Statistics">

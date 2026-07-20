@@ -38,6 +38,7 @@ import {
   ShieldAlert,
   ShieldOff,
   Trash2,
+  IdCard,
 } from "lucide-react";
 import {
   suspendUser,
@@ -300,8 +301,17 @@ export function UsersDataTable({
                             setSheetOpen(true);
                           }}
                         >
-                          <Eye className="h-4 w-4" />
-                          View Details
+                          <Eye className="h-4 w-4 text-muted-foreground" />
+                          View details
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="cursor-pointer gap-2"
+                          asChild
+                        >
+                          <a href={`/api/users/${user.id}/id-card`} target="_blank" rel="noopener noreferrer">
+                            <IdCard className="h-4 w-4 text-muted-foreground" />
+                            Download ID Card
+                          </a>
                         </DropdownMenuItem>
 
                         {user.role !== "ADMIN" && (
