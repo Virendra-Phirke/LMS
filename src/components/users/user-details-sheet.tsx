@@ -45,7 +45,6 @@ interface UserDetailsSheetProps {
     email: string;
     role: string;
     status: string;
-    emailVerified: boolean;
     createdAt: Date;
     fullName: string | null;
     phone: string | null;
@@ -255,29 +254,7 @@ export function UserDetailsSheet({
                   label="Email"
                   value={user.email}
                 />
-                <DetailRow
-                  icon={CheckCircle2}
-                  label="Email Verified"
-                  value={
-                    <span
-                      className={
-                        user.emailVerified
-                          ? "text-emerald-500 font-medium"
-                          : "text-amber-500 font-medium"
-                      }
-                    >
-                      {user.emailVerified ? (
-                        <span className="flex items-center gap-1.5">
-                          <CheckCircle2 className="w-3.5 h-3.5" /> Verified
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5">
-                          <XCircle className="w-3.5 h-3.5" /> Not Verified
-                        </span>
-                      )}
-                    </span>
-                  }
-                />
+
                 <DetailRow
                   icon={Phone}
                   label="Phone"

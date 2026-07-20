@@ -20,7 +20,7 @@ const ROLE_DASHBOARDS: Record<string, string> = {
 
 // ─── Middleware ───────────────────────────────────────────────────────────────
 
-export default clerkMiddleware(async (auth, request) => {
+export const proxy = clerkMiddleware(async (auth, request) => {
   const { pathname } = request.nextUrl;
 
   // Skip static files

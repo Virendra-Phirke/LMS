@@ -14,7 +14,6 @@ export default function LibrarianStudentsPage() {
       email: string;
       role: string;
       status: string;
-      emailVerified: boolean;
       createdAt: Date;
       fullName: string | null;
       phone: string | null;

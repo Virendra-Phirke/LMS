@@ -19,7 +19,6 @@ export default function UsersManagementPage() {
       email: string;
       role: string;
       status: string;
-      emailVerified: boolean;
       createdAt: Date;
       fullName: string | null;
       phone: string | null;
