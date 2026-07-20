@@ -1,9 +1,6 @@
 import { redirect } from "next/navigation";
-import { currentUser } from "@clerk/nextjs/server";
-import { db } from "@/db";
-import { users, userProfiles } from "@/db/schema";
-import { eq } from "drizzle-orm";
 import DashboardLayout from "@/components/dashboard/dashboard-layout";
+import { getCurrentUser } from "@/actions/auth";
 import { setupStudentProfile } from "@/actions/users";
 
 export default async function Layout({
@@ -11,35 +8,14 @@ export default async function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  const clerkUser = await currentUser();
-
-  if (!clerkUser) {
-    redirect("/login");
-  }
-
-  let [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.clerkId, clerkUser.id))
-    .limit(1);
+  let user = await getCurrentUser();
 
   if (!user) {
+    // Attempt to setup profile if missing (only works if they have a Clerk session but no DB record)
     await setupStudentProfile();
-    // Re-fetch after creation
-    [user] = await db
-      .select()
-      .from(users)
-      .where(eq(users.clerkId, clerkUser.id))
-      .limit(1);
-    
+    user = await getCurrentUser();
     if (!user) redirect("/login");
   }
-
-  const [profile] = await db
-    .select()
-    .from(userProfiles)
-    .where(eq(userProfiles.userId, user.id))
-    .limit(1);
 
   return (
     <DashboardLayout
@@ -47,8 +23,8 @@ export default async function Layout({
         id: user.id,
         email: user.email,
         role: user.role,
-        profile: profile
-          ? { fullName: profile.fullName, avatar: profile.avatar }
+        profile: user.profile
+          ? { fullName: user.profile.fullName, avatar: user.profile.avatar }
           : null,
       }}
     >

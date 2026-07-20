@@ -1,15 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getStudentDashboardStats } from "@/actions/dashboard";
-import { getSession } from "@/lib/auth/session";
+import { getCurrentUser } from "@/actions/auth";
 import { redirect } from "next/navigation";
 import { Library, ClipboardList, Coins, Clock, Sparkles, IdCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default async function StudentDashboard() {
-  const session = await getSession();
-  if (!session?.sub) redirect("/login");
+  const session = await getCurrentUser();
+  if (!session?.id) redirect("/login");
 
-  const statsData = await getStudentDashboardStats(session.sub);
+  const statsData = await getStudentDashboardStats(session.id);
 
   const stats = [
     {
@@ -63,7 +63,7 @@ export default async function StudentDashboard() {
         </div>
         <div className="shrink-0 gap-2 flex">
           <a
-            href={`/api/users/${session.sub}/id-card`}
+            href={`/api/users/${session.id}/id-card`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2 gap-2"

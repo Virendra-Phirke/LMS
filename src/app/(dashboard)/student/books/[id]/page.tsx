@@ -1,10 +1,10 @@
-import { requireStudent } from "@/lib/auth/session";
+import { getCurrentUser } from "@/actions/auth";
 import { getBookById } from "@/actions/books";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ReserveBookButton } from "@/components/circulation/reserve-book-button";
 import Link from "next/link";
-import { getSession } from "@/lib/auth/session";
+
 import { ArrowLeft, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -16,11 +16,8 @@ export default async function BookDetailsPage(props: {
   params: Promise<{ id: string }>;
 }) {
   const params = await props.params;
-  const authError = await requireStudent();
-  if (authError) redirect("/login");
-
-  const session = await getSession();
-  if (!session) redirect("/login");
+  const user = await getCurrentUser();
+  if (!user || user.role !== "STUDENT") redirect("/login");
 
   const book = await getBookById(params.id);
 
@@ -113,7 +110,7 @@ export default async function BookDetailsPage(props: {
                   Currently Available in Library
                 </div>
               ) : (
-                <ReserveBookButton userId={session.sub} bookId={book.id} />
+                <ReserveBookButton userId={user.id} bookId={book.id} />
               )}
             </div>
           </div>

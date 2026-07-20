@@ -76,7 +76,7 @@ export async function GET(
       {
         libraryName: settings.libraryName,
         memberName: profile?.fullName || user.email,
-        memberId: user.id,
+        memberId: student?.studentId || user.id,
         department: student?.department || user.role,
         issueDate: issueDateStr.replace(/ /g, "-"),
         expiryDate: expiryDateStr?.replace(/ /g, "-"),
