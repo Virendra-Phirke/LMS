@@ -2,8 +2,6 @@ import {
   pgTable,
   uuid,
   varchar,
-  text,
-  boolean,
   timestamp,
   pgEnum,
   index,
@@ -28,11 +26,10 @@ export const userStatusEnum = pgEnum("user_status", [
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
+  clerkId: varchar("clerk_id", { length: 255 }).unique(),
   email: varchar("email", { length: 255 }).unique().notNull(),
-  passwordHash: text("password_hash"),
   role: userRoleEnum("role").notNull(),
   status: userStatusEnum("status").default("PENDING").notNull(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true })
     .defaultNow()
     .notNull(),
@@ -40,5 +37,6 @@ export const users = pgTable("users", {
     .notNull()
     .$onUpdate(() => new Date()),
 }, (t) => [
-  index("user_email_role_idx").on(t.email, t.role)
+  index("user_email_role_idx").on(t.email, t.role),
+  index("user_clerk_id_idx").on(t.clerkId),
 ]);

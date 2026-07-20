@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { logout } from "@/actions/auth";
+import { usePathname, useRouter } from "next/navigation";
+import { useClerk } from "@clerk/nextjs";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -97,6 +97,8 @@ export default function DashboardLayout({
   };
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { signOut } = useClerk();
   const navItems = NAV_ITEMS[user.role] || [];
   const initials =
     user.profile?.fullName
@@ -182,7 +184,7 @@ export default function DashboardLayout({
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
-                onClick={() => logout()}
+                onClick={() => signOut(() => router.push("/login"))}
                 className="h-11 px-4 text-destructive hover:bg-destructive/10 hover:text-destructive font-medium rounded-xl transition-colors"
               >
                 <LogOut className="w-5 h-5 mr-3" />
@@ -249,7 +251,7 @@ export default function DashboardLayout({
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => logout()}
+                  onClick={() => signOut(() => router.push("/login"))}
                   className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer py-2"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

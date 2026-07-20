@@ -4,8 +4,6 @@ export { users, userRoleEnum, userStatusEnum } from "./users";
 export { userProfiles } from "./user-profiles";
 export { students } from "./students";
 export { librarians } from "./librarians";
-export { emailOtps } from "./email-otps";
-export { sessions } from "./sessions";
 export {
   books,
   authors,

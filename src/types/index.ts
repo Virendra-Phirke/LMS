@@ -2,15 +2,14 @@
 
 export type UserRole = "ADMIN" | "LIBRARIAN" | "STUDENT";
 export type UserStatus = "PENDING" | "ACTIVE" | "SUSPENDED" | "DEACTIVATED";
-export type OTPType = "EMAIL_VERIFICATION" | "PASSWORD_RESET";
 
 // ─── Session Payload ──────────────────────────────────────────────────────────
 
 export interface SessionPayload {
-  sub: string; // userId
+  sub: string; // userId (internal DB UUID)
   email: string;
-  role: UserRole;
-  jti: string; // session JWT ID
+  role: string;
+  jti: string;
 }
 
 // ─── Action Responses ─────────────────────────────────────────────────────────
@@ -26,10 +25,10 @@ export interface ActionResult {
 
 export interface UserWithProfile {
   id: string;
+  clerkId: string | null;
   email: string;
   role: UserRole;
   status: UserStatus;
-  emailVerified: boolean;
   createdAt: Date;
   updatedAt: Date;
   profile: {

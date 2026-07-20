@@ -1,15 +1,9 @@
 "use server";
 
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { db } from "@/db";
 import { users, userProfiles, students, librarians } from "@/db/schema";
 import { eq, or, like, sql, and, desc } from "drizzle-orm";
-import { getSession } from "@/lib/auth/session";
-import { createEmailOTP } from "@/lib/auth/otp";
-import {
-  sendVerificationOTP,
-  sendAccountCreatedNotification,
-} from "@/lib/email/send";
-import { destroyAllSessions } from "@/lib/auth/session";
 import {
   createLibrarianSchema,
   createStudentSchema,
@@ -19,8 +13,9 @@ import type { ActionResult, UserRole } from "@/types";
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function requireAdmin(): Promise<ActionResult | null> {
-  const session = await getSession();
-  if (!session || session.role !== "ADMIN") {
+  const { sessionClaims } = await auth();
+  const role = (sessionClaims?.metadata as { role?: string })?.role;
+  if (role !== "ADMIN") {
     return {
       success: false,
       message: "Unauthorized. Admin access required.",
@@ -33,6 +28,105 @@ function generateEmployeeId(): string {
   const prefix = "LIB";
   const random = Math.floor(100000 + Math.random() * 900000);
   return `${prefix}-${random}`;
+}
+
+// ─── Complete Student Onboarding ──────────────────────────────────────────────
+
+export async function completeOnboarding(
+  _prevState: ActionResult | null,
+  formData: FormData
+): Promise<ActionResult> {
+  const clerkUser = await currentUser();
+  if (!clerkUser) {
+    return { success: false, message: "Not authenticated" };
+  }
+
+  const rawData = {
+    studentId: formData.get("studentId") as string,
+    fullName: formData.get("fullName") as string,
+    email: clerkUser.emailAddresses[0]?.emailAddress || "",
+    department: (formData.get("department") as string) || "",
+    course: (formData.get("course") as string) || "",
+    phone: (formData.get("phone") as string) || "",
+  };
+
+  const validated = createStudentSchema.safeParse(rawData);
+  if (!validated.success) {
+    return {
+      success: false,
+      message: "Invalid input",
+      errors: validated.error.flatten().fieldErrors,
+    };
+  }
+
+  const { studentId, fullName, email, department, course, phone } =
+    validated.data;
+
+  // Check if Clerk user already has a DB record
+  const [existingUser] = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.clerkId, clerkUser.id))
+    .limit(1);
+
+  if (existingUser) {
+    return {
+      success: false,
+      message: "Account already set up. Please refresh the page.",
+    };
+  }
+
+  // Check if student ID already exists
+  const [existingStudentId] = await db
+    .select({ id: students.id })
+    .from(students)
+    .where(eq(students.studentId, studentId))
+    .limit(1);
+
+  if (existingStudentId) {
+    return {
+      success: false,
+      message: "A student with this ID already exists",
+    };
+  }
+
+  // Create user record
+  const [newUser] = await db
+    .insert(users)
+    .values({
+      clerkId: clerkUser.id,
+      email: email.toLowerCase(),
+      role: "STUDENT",
+      status: "ACTIVE",
+    })
+    .returning();
+
+  // Create profile
+  await db.insert(userProfiles).values({
+    userId: newUser.id,
+    fullName,
+    phone: phone || null,
+  });
+
+  // Create student record
+  await db.insert(students).values({
+    userId: newUser.id,
+    studentId,
+    department: department || null,
+    course: course || null,
+  });
+
+  // Set role in Clerk metadata (so middleware can read it from session)
+  const client = await clerkClient();
+  await client.users.updateUserMetadata(clerkUser.id, {
+    publicMetadata: { role: "STUDENT" },
+  });
+
+  return {
+    success: true,
+    message: "Account setup complete! Redirecting to your dashboard...",
+    data: { redirect: "/student" },
+  };
 }
 
 // ─── Create Librarian ─────────────────────────────────────────────────────────
@@ -61,7 +155,7 @@ export async function createLibrarian(
 
   const { fullName, email, phone } = validated.data;
 
-  // Check if email already exists
+  // Check if email already exists in DB
   const [existing] = await db
     .select({ id: users.id })
     .from(users)
@@ -75,7 +169,7 @@ export async function createLibrarian(
     };
   }
 
-  // Create user
+  // Create user record (no clerkId yet — will be linked when librarian signs up via Clerk)
   const [newUser] = await db
     .insert(users)
     .values({
@@ -98,23 +192,13 @@ export async function createLibrarian(
     employeeId: generateEmployeeId(),
   });
 
-  // Generate OTP and send emails
-  const otp = await createEmailOTP(newUser.id, "EMAIL_VERIFICATION");
-
-  try {
-    await sendAccountCreatedNotification(email, fullName, "LIBRARIAN");
-    await sendVerificationOTP(email, otp, fullName);
-  } catch {
-    // Log but don't fail the creation
-  }
-
   return {
     success: true,
-    message: `Librarian account created for ${fullName}. Verification email sent.`,
+    message: `Librarian account created for ${fullName}. They can sign up via Clerk to activate.`,
   };
 }
 
-// ─── Create Student ───────────────────────────────────────────────────────────
+// ─── Create Student (Admin) ──────────────────────────────────────────────────
 
 export async function createStudent(
   _prevState: ActionResult | null,
@@ -172,7 +256,7 @@ export async function createStudent(
     };
   }
 
-  // Create user
+  // Create user (no clerkId — will be linked when student signs up)
   const [newUser] = await db
     .insert(users)
     .values({
@@ -197,127 +281,9 @@ export async function createStudent(
     course: course || null,
   });
 
-  // Generate OTP and send emails
-  const otp = await createEmailOTP(newUser.id, "EMAIL_VERIFICATION");
-
-  console.log("-----------------------------------------");
-  console.log(`[DEV ONLY] OTP for ${email}: ${otp}`);
-  console.log("-----------------------------------------");
-
-  try {
-    await sendAccountCreatedNotification(email, fullName, "STUDENT");
-    await sendVerificationOTP(email, otp, fullName);
-  } catch (err) {
-    console.error("Failed to send email via Resend:", err);
-  }
-
   return {
     success: true,
-    message: `Student account created for ${fullName}. Verification email sent.`,
-  };
-}
-
-// ─── Suspend User ─────────────────────────────────────────────────────────────
-
-export async function registerStudent(
-  _prevState: ActionResult | null,
-  formData: FormData
-): Promise<ActionResult> {
-  const rawData = {
-    studentId: formData.get("studentId") as string,
-    fullName: formData.get("fullName") as string,
-    email: formData.get("email") as string,
-    department: (formData.get("department") as string) || "",
-    course: (formData.get("course") as string) || "",
-    phone: (formData.get("phone") as string) || "",
-  };
-
-  const validated = createStudentSchema.safeParse(rawData);
-  if (!validated.success) {
-    return {
-      success: false,
-      message: "Invalid input",
-      errors: validated.error.flatten().fieldErrors,
-    };
-  }
-
-  const { studentId, fullName, email, department, course, phone } =
-    validated.data;
-
-  // Check if email already exists
-  const [existingEmail] = await db
-    .select({ id: users.id })
-    .from(users)
-    .where(eq(users.email, email.toLowerCase()))
-    .limit(1);
-
-  if (existingEmail) {
-    return {
-      success: false,
-      message: "An account with this email already exists",
-    };
-  }
-
-  // Check if student ID already exists
-  const [existingStudentId] = await db
-    .select({ id: students.id })
-    .from(students)
-    .where(eq(students.studentId, studentId))
-    .limit(1);
-
-  if (existingStudentId) {
-    return {
-      success: false,
-      message: "A student with this ID already exists",
-    };
-  }
-
-  // Create user
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      email: email.toLowerCase(),
-      role: "STUDENT",
-      status: "PENDING",
-    })
-    .returning();
-
-  // Create profile
-  await db.insert(userProfiles).values({
-    userId: newUser.id,
-    fullName,
-    phone: phone || null,
-  });
-
-  // Create student record
-  await db.insert(students).values({
-    userId: newUser.id,
-    studentId,
-    department: department || null,
-    course: course || null,
-  });
-
-  // Generate OTP and send emails
-  const otp = await createEmailOTP(newUser.id, "EMAIL_VERIFICATION");
-
-  console.log("-----------------------------------------");
-  console.log(`[DEV ONLY] OTP for ${email}: ${otp}`);
-  console.log("-----------------------------------------");
-
-  try {
-    await sendAccountCreatedNotification(email, fullName, "STUDENT");
-    await sendVerificationOTP(email, otp, fullName);
-  } catch (err) {
-    console.error("Failed to send email via Resend:", err);
-  }
-
-  return {
-    success: true,
-    message: `Account created! Please check your email for the verification code.`,
-    data: { 
-      userId: newUser.id,
-      devOtp: process.env.NODE_ENV === "development" ? otp : undefined 
-    },
+    message: `Student account created for ${fullName}. They can sign up via Clerk to activate.`,
   };
 }
 
@@ -332,11 +298,9 @@ export async function suspendUser(userId: string): Promise<ActionResult> {
     .set({ status: "SUSPENDED" })
     .where(eq(users.id, userId));
 
-  await destroyAllSessions(userId);
-
   return {
     success: true,
-    message: "User has been suspended and all sessions invalidated.",
+    message: "User has been suspended.",
   };
 }
 
@@ -367,8 +331,6 @@ export async function deactivateUser(userId: string): Promise<ActionResult> {
     .update(users)
     .set({ status: "DEACTIVATED" })
     .where(eq(users.id, userId));
-
-  await destroyAllSessions(userId);
 
   return {
     success: true,
@@ -431,7 +393,6 @@ export async function getUsers(options?: {
         email: users.email,
         role: users.role,
         status: users.status,
-        emailVerified: users.emailVerified,
         createdAt: users.createdAt,
         fullName: userProfiles.fullName,
         phone: userProfiles.phone,
@@ -597,11 +558,7 @@ export async function deleteUser(userId: string): Promise<ActionResult> {
       };
     }
 
-    // Destroy all sessions first
-    await destroyAllSessions(userId);
-
-    // Delete user — cascades to profile, student/librarian record,
-    // borrow records, reservations, sessions, email OTPs
+    // Delete user — cascades to profile, student/librarian record, etc.
     await db.delete(users).where(eq(users.id, userId));
 
     return {
