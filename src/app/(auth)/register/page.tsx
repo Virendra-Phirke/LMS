@@ -19,6 +19,7 @@ export default function RegisterPage() {
 
       <div className="flex justify-center">
         <SignUp
+          routing="hash"
           fallbackRedirectUrl="/onboarding"
           appearance={{
             elements: {

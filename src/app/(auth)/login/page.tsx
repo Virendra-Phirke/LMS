@@ -19,7 +19,8 @@ export default function LoginPage() {
 
       <div className="flex justify-center">
         <SignIn
-          fallbackRedirectUrl="/"
+          routing="hash"
+          fallbackRedirectUrl="/onboarding"
           appearance={{
             elements: {
               rootBox: "w-full",
